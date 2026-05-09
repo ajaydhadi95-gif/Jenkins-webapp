@@ -8,16 +8,16 @@ pipeiline {
                 sh 'sudo systemctl start nginx'
             }
         }
-            stage('build'){
-            steps{
-                npm run build
+         stage('build'){
+             steps{
+                 sh 'npm run build'
             }
         }
-            stage('post build actions'){
-            steps{
-                sh 'echo "build completed succussfully"'
-                sh 'sudo cp -r build/* /var/www/html/'
-                sh 'sudo systemctl restart nginx'
+        stage('post build actions'){
+             steps{
+                 sh 'echo "build completed succussfully"'
+                 sh 'sudo cp -r build/* /var/www/html/'
+                    sh 'sudo systemctl restart nginx'
             }
         }
     }
