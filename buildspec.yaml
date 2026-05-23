@@ -1,0 +1,26 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 24
+    commands:
+      - echo installing source NPM dependencies..
+      - npm install
+  build:
+     commands:
+     - echo Build started on `date`
+     - echo building the Node.js application..
+     - npm install
+  post _build:
+    commands:
+      - echo build completed on `date`
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'dist'
+
+
+
+
