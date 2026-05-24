@@ -1,0 +1,13 @@
+version: 0.2
+os: linux
+files: 
+  - source: /
+    destination: /var/www/thml
+    overwrite: true
+hooks:
+afterinstall:
+    - location: scripts/restartnginx.sh
+    - timeout: 300
+    - runas: root
+    
+    
