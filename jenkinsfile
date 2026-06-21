@@ -81,10 +81,11 @@ pipeline{
             steps{
                 sh """
                 scp docker-compose.yaml ubuntu@3.108.42.35:/home/ubuntu/
-                ssh ubuntu@3.108.42.35'''
+                ssh ubuntu@3.108.42.35''' << EOF
                 cd /home/ubuntu
                 docker-compose down
                 docker-compose up -d
+                << EOF
                 '''
                 """
             }
