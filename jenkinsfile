@@ -96,10 +96,9 @@ pipeline{
         REPOSITORY = 'frontend'
         IMAGE_TAG = '${BUILD_NUMBER}'
         ECR_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPOSITORY}:${IMAGE_TAG}"
-        ACCESS_KEY_ID = credentials('ACCESS_KEY_ID')
-        SECRET_ACCESS_KEY = credentials('SECRET_ACCESS_KEY')
-        CLUSTER_NAME = 'default'
-        SERVICE_NAME = 'frontend-f2ec'
+        CLUSTER_NAME = 'demo-cluster'
+        SERVICE_NAME = 'frontend'
+        NAMESPACE = 'development'
 
 
     }
@@ -118,47 +117,46 @@ pipeline{
         }
         stage('Login to AWS ECR'){
             steps {
-                withCredentials([
-                    string(credentialsId: 'ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh """
-                        export AWS_DEFAULT_REGION=${AWS_REGION}
-
-                        aws sts get-caller-identity
-
-                        aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login \
-                        --username AWS \
-                        --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                    """
+                sh """
+                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                """   
                 }
             }
         }
-        stage ('Login to AWS CLI'){
-            steps{
-                sh """
-                aws configure set aws_access_key_id ${ACCESS_KEY_ID}
-                aws configure set aws_secret_access_key ${SECRET_ACCESS_KEY}
-                aws configure set default.region ${AWS_REGION}
-                """
-            }
-        }
+
         stage('Tag and Push Docker Image to ECR'){
             steps{
                 sh """
                 docker tag ${REPOSITORY}:${IMAGE_TAG} ${ECR_URI}
+                docker tag ${REPOSITORY}:${IMAGE_TAG} ${ECR_URI}:latest
                 docker push ${ECR_URI}
+                docker push ${ECR_URI}:latest
                 """
             }
         }
-        stage('Deploy to ECS Service'){
+        stage('Configure kubectl'){
             steps{
                 sh """
-                aws ecs update-service \
-                --cluster ${CLUSTER_NAME} \
-                --service ${SERVICE_NAME} \
-                --force-new-deployment
+                aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
+                kubectl config set-context --current --namespace=${K8S_NAMESPACE}
+                """
+            }
+        }
+        stage('Deploy to EKS Service'){
+            steps{
+                sh """
+                kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${ECR_URI} --record
+                kubectl rollout status deployment/${SERVICE_NAME} -n ${NAMESPACE} --timeout=300s;
+                """
+            }
+        }
+        stage('Verify Deployment'){
+            steps{
+                sh """
+                kubectl get pods -n ${K8SNAMESPACE}
+                kubectl get svc -n ${K8S_NAMESPACE}
+                kubectl get ingress -n ${K8S_NAMESPACE}
+                kubectl get deployment -n ${K8S_NAMESPACE}
                 """
             }
         }
